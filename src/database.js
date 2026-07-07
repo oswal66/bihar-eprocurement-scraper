@@ -35,10 +35,33 @@ export async function saveTender(tenderData) {
       return null;
     }
 
-    console.log('Tender saved:', data);
     return data;
   } catch (error) {
     console.error('Database error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get tender by tender number (for stale data prevention)
+ */
+export async function getTenderByNumber(tenderNumber) {
+  try {
+    const { data, error } = await supabase
+      .from('tenders')
+      .select('*')
+      .eq('tender_number', tenderNumber)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // No rows found
+      return null;
+    }
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching tender by number:', error);
     return null;
   }
 }
@@ -162,7 +185,7 @@ export async function getTenderCount() {
 }
 
 /**
- * Delete old tenders (older than specified days)
+ * Delete old tenders (older than specified days) - Stale data cleanup
  */
 export async function deleteOldTenders(daysOld = 90) {
   try {
@@ -171,10 +194,11 @@ export async function deleteOldTenders(daysOld = 90) {
     const { error } = await supabase
       .from('tenders')
       .delete()
-      .lt('updated_at', cutoffDate.toISOString());
+      .lt('updated_at', cutoffDate.toISOString())
+      .eq('status', 'Closed');
 
     if (error) throw error;
-    console.log(`Deleted tenders older than ${daysOld} days`);
+    console.log(`✅ Deleted closed tenders older than ${daysOld} days`);
     return true;
   } catch (error) {
     console.error('Error deleting old tenders:', error);
@@ -182,8 +206,30 @@ export async function deleteOldTenders(daysOld = 90) {
   }
 }
 
+/**
+ * Get recently updated tenders
+ */
+export async function getRecentlyUpdatedTenders(hoursBack = 24) {
+  try {
+    const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+
+    const { data, error } = await supabase
+      .from('tenders')
+      .select('*')
+      .gte('updated_at', cutoffTime.toISOString())
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching recently updated tenders:', error);
+    return [];
+  }
+}
+
 export default {
   saveTender,
+  getTenderByNumber,
   getAllTenders,
   getTenderById,
   getTendersByDepartment,
@@ -191,4 +237,5 @@ export default {
   getUpcomingTenders,
   getTenderCount,
   deleteOldTenders,
+  getRecentlyUpdatedTenders,
 };
