@@ -1,0 +1,35 @@
+{
+  "name": "bihar-eprocurement-scraper",
+  "version": "1.0.0",
+  "description": "Web scraper for Bihar Govt eProcurement portal tender table with Supabase integration",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "scrape": "node src/scraper.js",
+    "schedule": "node src/scheduler.js"
+  },
+  "keywords": [
+    "tender",
+    "scraper",
+    "supabase",
+    "eproc",
+    "bihar"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.4.0",
+    "cheerio": "^1.0.0-rc.12",
+    "@supabase/supabase-js": "^2.26.0",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
