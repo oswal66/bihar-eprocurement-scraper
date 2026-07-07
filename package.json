@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "scrape": "node src/scraper.js",
-    "schedule": "node src/scheduler.js"
+    "schedule": "node src/scheduler.js",
+    "probe": "node src/probe.js"
   },
   "keywords": [
     "tender",
@@ -27,7 +28,8 @@
     "dotenv": "^16.3.1",
     "node-cron": "^3.0.2",
     "cors": "^2.8.5",
-    "body-parser": "^1.20.2"
+    "body-parser": "^1.20.2",
+    "playwright": "^1.40.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
