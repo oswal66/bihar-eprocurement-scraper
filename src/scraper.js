@@ -26,28 +26,24 @@ export async function scrapeTenders() {
 
     // Handle modals - Close any overlay/modal elements
     console.log('🔍 Checking for modals...');
-    const modalsFound = await page.locator('.modal, [role="dialog"], .popup, .overlay').count();
     
-    if (modalsFound > 0) {
-      console.log(`⚠️  Found ${modalsFound} modal(s), attempting to close...`);
-      
-      // Try to close modals
-      const closeButtons = await page.locator('button:has-text("Close"), button:has-text("X"), .close, [aria-label*="close" i]');
-      const closeCount = await closeButtons.count();
-      
-      for (let i = 0; i < closeCount; i++) {
-        try {
-          const btn = closeButtons.nth(i);
-          if (await btn.isVisible()) {
-            await btn.click();
-            await page.waitForTimeout(500);
-          }
-        } catch (e) {
-          // Continue if button click fails
+    try {
+      // Try to close modals with timeout
+      await page.locator('.modal, [role="dialog"], .popup, .overlay').evaluateAll(
+        (elements) => {
+          elements.forEach((el) => {
+            const closeBtn = el.querySelector('button:contains("Close"), button:contains("X"), .close, [aria-label*="close" i]');
+            if (closeBtn && closeBtn.offsetParent !== null) {
+              closeBtn.click();
+            }
+          });
         }
-      }
+      );
       
+      await page.waitForTimeout(1000);
       console.log('✅ Modal close attempt completed');
+    } catch (e) {
+      console.log('⚠️  Modal close skipped (non-critical)');
     }
 
     // Wait for table to be visible
@@ -104,7 +100,6 @@ export async function scrapeTenders() {
       scrapedCount: tenders.length, 
       savedCount: savedCount,
       timestamp: now.toISOString(),
-      modalsHandled: modalsFound > 0
     };
 
   } catch (error) {
@@ -124,7 +119,7 @@ export async function scrapeTenders() {
 }
 
 /**
- * Parse tenders from HTML content
+ * Parse tenders from HTML content with header filtering
  */
 async function parseTendersFromHtml($) {
   const tenders = [];
@@ -138,6 +133,22 @@ async function parseTendersFromHtml($) {
   }
 
   console.log(`📊 Found ${tables.length} table(s), parsing...`);
+
+  // Keywords that indicate header/navigation rows
+  const headerKeywords = [
+    'Tender Number',
+    'Description',
+    'Department',
+    'Closing',
+    'Issuing Authority',
+    'Status',
+    'Category',
+    'Type',
+    'Opening Date',
+    'Tender ID',
+    'Title',
+    'Organization'
+  ];
 
   // Process each table
   tables.each((tableIdx, table) => {
@@ -165,6 +176,22 @@ async function parseTendersFromHtml($) {
 
         // Skip if missing critical data
         if (!tenderNumber || !description) return;
+
+        // Filter out header rows
+        const rowText = [tenderNumber, description, department].join(' ').toLowerCase();
+        const isHeaderRow = headerKeywords.some(keyword => 
+          rowText.includes(keyword.toLowerCase())
+        );
+
+        if (isHeaderRow) {
+          console.log(`  ⏭️  Skipping header row: ${tenderNumber}`);
+          return;
+        }
+
+        // Skip if tenderNumber looks like a header (too generic)
+        if (/^(S\.?No|Sno|No\.|Number|ID|Tender Number)$/i.test(tenderNumber)) {
+          return;
+        }
 
         // Extract link
         const link = $row.find('a').attr('href') || '';
